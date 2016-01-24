@@ -1,0 +1,181 @@
+
+#bootstrap-table a.editable-empty {
+	color: #fff;
+	border-bottom: dashed 1px #fff;
+}
+header {
+	height: 70px;
+}
+.day-num {
+	background-color: #ddd;
+}
+.day {
+	background-color: #BEEF8A;
+	cursor: pointer;
+}
+.day:hover {
+	background: url(../img/krestik.png) center center;
+}
+.day-num, .day {
+	float: left;
+	height: 22px;
+	width: 22px;
+	border: 1px solid #ccc;
+	text-align: center;
+	margin: 1px;
+}
+.day-nums, .days {
+	overflow: hidden;
+}
+.col2 {
+	width:855px !important;
+}
+.col1 {
+	font-size: 11px; 
+}
+.col4 {
+	width: 50px;
+}
+.not-reserved.selected {
+	background-color: #E1BEF3  ;
+}
+.reserved {
+	background-color: #eeb7a5;
+}
+.day.end {
+	background: url(../img/out.png) left top no-repeat;
+	background-color: #BEEF8A;
+}
+.day.start {
+background: url(../img/in.png) right bottom no-repeat;
+background-color: #BEEF8A;
+}
+.day.start.end {
+	background: url(../img/inout.png) center center;
+	background-color: #BEEF8A;
+}
+.month-name
+{
+float: left;
+width: 35px;
+height: 22px;
+border: 1px solid #ccc;
+margin: 1px;
+text-align: center;
+}
+
+.status-1 {
+	background-color: #FAF094;
+}
+.status-2 {
+	background-color: #5499db;
+}
+.status-3 {
+	background-color: #ccc;
+}
+.overdue {
+	background-color: #f84a1b;
+}
+#ckModal {
+
+width: 90%;
+left: 5%;
+top: 10%;
+
+margin: 0px;
+}
+#ckModal form {
+	margin: 0px;
+}
+#ckModal .modal-body {
+max-height: 800px;
+}
+
+#myModal {
+  width: 560px;
+  margin: 0px;
+  top: 100px;
+  margin-left: -280px;
+}
+#myModal form {
+	margin: 0px;
+}
+#myModal .modal-body {
+max-height: 400px;
+}
+.informer-items {
+margin-bottom: 20px;
+overflow: hidden;
+}
+.informer-items .start{
+background: url(../img/in.png) right bottom no-repeat;
+background-color: #BEEF8A;
+}
+.informer-items .end{
+background: url(../img/out.png) left top no-repeat;
+background-color: #BEEF8A;
+}
+.informer-item {
+	float: left;
+	width: 200px;
+	
+}
+.informer-item .status {
+	width: 24px;
+	height: 24px;
+	border: 1px solid #ccc;
+	margin: 5px;
+	float: left;
+}
+.informer-item p{
+	margin: 0px;
+	padding-top: 7px;
+	margin-left: 10px;
+	float: left;
+}
+@media only screen and (max-device-width: 1280px) {
+.col1 {
+	width: 100px;
+}
+
+}
+.btn-group {
+	margin-bottom: 25px;
+}
+.row-count{
+	width: 100px;
+}
+.form-horizontal .control-label {
+	width: inherit;
+}
+.pagination {
+height: 40px;
+margin: 0px;
+}
+.pagination ul>li>a, .pagination ul>li>span {
+	float: left;
+	padding: 0px 10px;
+	line-height: 30px;
+	text-decoration: none;
+	background-color: #fff;
+	border: 1px solid #ddd;
+	border-left-width: 0;
+}
+#table-footer {
+ margin-bottom: 0px; 
+}
+footer {
+	margin-bottom: 20px;
+}
+a.editable, a.editable:hover {
+text-decoration: none;
+border-bottom: 0px;
+}
+
+.modal-open { overflow: hidden; }
+
+.year-value {
+    border: 1px solid #ccc;
+    text-align: center;
+    margin: 1px 11px 1px 1px;
+}

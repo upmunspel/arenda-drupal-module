@@ -1,0 +1,70 @@
+<?php
+/**
+ * Implements hook_install().
+ */
+function feodosia_leto_install() {
+  $res = drupal_install_schema('feodosia_leto');
+  foreach($res as $item){
+	  if ($item["success"]){
+		  drupal_set_message("Схема feodosia_leto создана успешно.");
+	  }
+  }
+  
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function feodosia_leto_uninstall() {
+  $res = drupal_uninstall_schema('feodosia_leto');
+  foreach($res as $item){
+	  if ($item["success"]){
+		  drupal_set_message("Схема feodosia_leto удалена успешно.");
+	  }
+  }
+}
+function feodosia_leto_schema() {
+  $schema['feodosia_leto'] = array(
+  
+    'description' => t('The base table for feodosia_leto.'),
+    'fields' => array(
+      'id' => array(
+        'description' => t('The primary identifier for a feodosia_leto.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'nid' => array(
+        'description' => t('The current {node_revisions}.vid version identifier.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'fio' => array(
+        'description' => t('The fio of this node.'),
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => ''),
+	  'phone' => array(
+        'description' => t('The fio of this node.'),
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => ''),
+	
+      'info' => array(
+        'description' => t('The title of this node, always treated a non-markup plain text.'),
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => ''),
+	  'reserv' => array(
+        'description' => t('The title of this node, always treated a non-markup plain text.'),
+        'type' => 'text',
+        'not null' => FALSE,
+        'default' => ''),
+      ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}

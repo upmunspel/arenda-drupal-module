@@ -1,0 +1,9 @@
+; $Id$
+name = feodosia_leto
+description = Allows admin users to help some task do.
+package = Feodosia Leto
+
+version = 1.1
+core = 6.x 
+
+dependencies[] = taxonomy

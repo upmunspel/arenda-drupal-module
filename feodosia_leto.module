@@ -1,0 +1,458 @@
+<?php
+/*
+*  feodosia_leto v1.1 
+*  Author: Munspel@ukr.net
+*  Used libs:
+*  - http://vitalets.github.io/bootstrap-editable/
+*  - bootstrap 2.2.1
+*  - http://www.jqueryscript.net/table/jQuery-Plugin-For-Bootstrap-Based-Data-Table-Bootstrap-Data-Table.html
+*/
+
+function feodosia_leto_perm() {
+  return array('access feodosia_leto');
+}
+function feodosia_leto_init() {
+	
+	$is_admin = false;
+  if (user_is_logged_in()) { $is_admin = true; }
+  
+    drupal_add_js(array(
+      'isAdmin' =>$is_admin
+    ), 'setting');
+}
+/**
+ * Реализация hook_menu().
+ */
+function feodosia_leto_menu() {
+ $items = array();
+ $items['admin/content/feodosia_leto'] = array(
+	'title' => t('Феодосия-Лето'),
+	'description' => t('Вспомагательные сервисы'),
+	'page callback' => 'drupal_get_form',
+	'page arguments' => array('feodosia_leto_settings'),
+	'access arguments' => array('access feodosia_leto'),
+ );
+ $items['admin/content/feodosia_leto/update'] = array(
+	'title' => t('Обновить характеристики жилья'),
+	'description' => t('Обновляет характеристики жилья.'),
+	'page callback' => 'feodosia_leto_update_weight',
+	'page arguments' => array(),
+	'access arguments' => array('access feodosia_leto'),
+ );
+ $items['admin/content/feodosia_leto/arenda'] = array(
+	'title' => "Аренда жилья",
+	'description' => t('График аренда жилья.'),
+	'page callback' => 'feodosia_leto_arenda',
+	'page arguments' => array(),
+	'access arguments' => array('access feodosia_leto'),
+ );
+  $items['feodosia_leto/arenda'] = array(
+	'title' => "График",
+	'description' => t('График аренда жилья.'),
+	'page callback' => 'feodosia_leto_arenda_page',
+	'page arguments' => array(),
+	'access arguments' => array('access feodosia_leto'),
+	'type' => MENU_CALLBACK
+ );
+ $items['feodosia_leto/ajax'] = array(
+	'title' => "",
+	'description' => t('График аренда жилья.'),
+	'page callback' => 'feodosia_leto_arenda_ajax',
+	'page arguments' => array(),
+	'access arguments' => array('access feodosia_leto'),
+	'type' => MENU_CALLBACK
+ );
+ return $items;
+}
+
+function feodosia_leto_settings() {
+  $v = taxonomy_get_vocabularies();
+  $data = array();
+  foreach($v as $item){
+	  $data[$item->vid] = $item->name;
+  }
+  $form['fl_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Настройка модуля'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['fl_fieldset']['fl_voc_id'] = array(
+    '#type' => 'select',
+    '#title' => t('Словарь терминов'),
+    '#options' => $data, 
+    '#default_value' => variable_get('fl_voc_id', "6"),
+	'#description'=>t('Словарь терминов для которого будет выболнено обновление поля ВЕС, в соответствии с определеным пользователем порядке.'),
+  );    
+  $form['fa_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Настройка страницы бронирования'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['fa_fieldset']['fa_editor'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Список редакторов'),
+    //'#options' => $data, 
+    '#default_value' => variable_get('fa_editor', "admin, user"),
+	'#description'=>t('Список редакторов через запятую'),
+  );        
+  $form['fa_fieldset']['fa_outofseason'] = array(
+   '#type' => 'checkbox', 
+   '#title' => t('Отображать жилье в межсезоние'), 
+   '#default_value' => variable_get('fa_outofseason', 0),
+   '#description'=>t('Если не отмечено, то варианты жилья в межсезоние будут скрыты.'),
+  );  
+  $form['fa_fieldset']['fa_notoutofseason'] = array(
+   '#type' => 'checkbox', 
+   '#title' => t('Отображать жилье не в межсезоние'), 
+   '#default_value' => variable_get('fa_notoutofseason', 1),
+   '#description'=>t('Если отмечено, то варианты жилья не в межсезоние будут отображатся.'),
+  ); 
+  
+ $form['fa_fieldset']['fa_months'] = array(
+   '#type' => 'select', 
+   '#multiple' => true, 
+   '#default_value' => variable_get('fa_months', array(1)), 
+   '#options' => array(1 => "Янв", 2 => "Фев", 3 => "Мар", 4 => "Апр", 5 => "Май", 6 => "Июн", 7 => "Июл", 8 => "Авг", 9 => "Сен", 10 => "Окт", 11 => "Ноя", 12 => "Дек"),
+   '#title' => t('Месяцы'), 
+   '#description'=>t('Отметить месяца в которые выполняется аренда.'),
+  );   
+  $opt = array();
+  for($i=2015; $i<= date("Y")+3; $i++){
+	$opt[$i] = $i;	
+  }
+ $form['fa_fieldset']['fa_years'] = array(
+   '#type' => 'select', 
+   '#multiple' => true, 
+   '#default_value' => variable_get('fa_years', array(2015)), 
+   '#options' => $opt,
+   '#title' => t('Годы'), 
+   '#description'=>t('Отметить годы в которые выполняется аренда.'),
+  );   
+  return system_settings_form($form);
+}
+function _feodosia_leto_validata_reserv($objs, $curobj){
+	$error = "";
+	if ($curobj->end_date < ($curobj->start_date+2*86400) ) return "Дата заезда не может быть меньше (или равной) даты отьезда";
+	foreach($objs as $obj){
+		
+			if ($obj->start_date < $curobj->start_date && $obj->end_date > $curobj->start_date) {
+				return "Недопустимая дата начала интервала!";
+			}
+			if ($obj->end_date > $curobj->end_date && $obj->start_date < $curobj->end_date) {
+				return "Недопустимая дата окончания интервала!";
+			}
+			if ($obj->start_date >= $curobj->start_date && $obj->end_date <= $curobj->end_date) {
+				return "Недопустимая дата начала и окончания интервала!";
+			}
+	}
+	return $error;
+}
+function feodosia_leto_arenda_ajax() {
+	$reserv_month = variable_get('fa_months', array(1)); 
+	$reserv_year = variable_get('fa_years', array(2015)); 
+	$path = drupal_get_path("module","feodosia_leto")."/template";
+	$reserveObjects = array();
+	
+	$nid = $_REQUEST["pk"];
+	if (isset($_REQUEST["opt"]) && $_REQUEST["opt"] == "getinfo" && intval($nid) > 0 ){
+		
+		$res = db_query("SELECT id, nid, info FROM feodosia_leto WHERE nid = $nid");
+		$item = db_fetch_object($res);
+		echo json_encode($item);
+		die();
+	}
+	/* get reserved object by nid and hash  opt = 'getbyhash' */
+	if (isset($_REQUEST["opt"]) && $_REQUEST["opt"] == "getbyhash" && intval($nid) > 0 ){
+		
+		$res = db_query("SELECT * FROM feodosia_leto WHERE nid = $nid");
+		$item = db_fetch_object($res);
+		$objs = unserialize($item->reserv);
+		$hash = $_REQUEST["hash"];
+		foreach($objs as $obj){
+			if ($hash == $obj->hash) {
+				$obj->start_date = date("Y-m-d",$obj->start_date);
+				$obj->end_date = date("Y-m-d",$obj->end_date);
+				echo json_encode($obj);
+				die();
+			}
+		}
+		die();
+	}
+	if (isset($_REQUEST["opt"]) && $_REQUEST["opt"] == "delete" && intval($nid) > 0 ){
+		
+		$res = db_query("SELECT * FROM feodosia_leto WHERE nid = $nid");
+		$item = db_fetch_object($res);
+		$objs = unserialize($item->reserv);
+		$hash = trim($_REQUEST["hash"]);
+		foreach($objs as $i => $obj){
+			if ($hash == $obj->hash) {
+				unset($objs[$i]);
+			}
+		}
+		$item->reserv = serialize($objs);
+		$code = drupal_write_record("feodosia_leto", $item,"nid");
+		//echo "<pre>".print_r($objs,1)."</pre>";
+		echo theme_render_template($path."/reserv_row.tpl.php", array("nid"=> $nid, "reservObject"=>$objs , "reserv_month"=>$reserv_month ,"reserv_year"=>$reserv_year));
+		die();
+	}
+	if (isset($_REQUEST["opt"]) && $_REQUEST["opt"] == "update" && intval($nid) > 0 ){
+		
+		$res = db_query("SELECT * FROM feodosia_leto WHERE nid = $nid");
+		$item = db_fetch_object($res);
+		if (isset($item)){
+			$objs = unserialize($item->reserv);
+		} else {
+			$objs = array();
+		}
+		$old_hash = trim($_REQUEST["hash"]);
+		$reservObj = null;
+		$reservObj->status = $_REQUEST["status"];
+		$reservObj->nid = $nid;
+		$reservObj->start_date = strtotime($_REQUEST["start_date"]);
+		$reservObj->end_date = strtotime($_REQUEST["end_date"]);
+		$reservObj->start_time = $_REQUEST["start_time"];
+		$reservObj->end_time = $_REQUEST["end_time"];
+		$reservObj->delay = strtotime($_REQUEST["delay"]);
+		$reservObj->editor = $_REQUEST["editor"];
+		$reservObj->hash = md5($reservObj->start_date.$reservObj->end_date.$reservObj->nid);
+	 
+		foreach($objs as $i => $obj){
+			if ($old_hash == $obj->hash) {
+				unset($objs[$i]);
+			}
+		}
+		$valid  = _feodosia_leto_validata_reserv($objs, $reservObj);
+		if ($valid == ""){
+			$objs[] = $reservObj;
+			
+			if (empty($item)){
+				$item->nid = $nid;
+				$item->reserv = serialize($objs);
+				$code = drupal_write_record("feodosia_leto", $item);
+				
+			} else {
+				$item->reserv = serialize($objs);
+				$code = drupal_write_record("feodosia_leto", $item,"nid");
+			}
+			
+			$response = array(
+				"status"=>"success", 
+				"data"=>theme_render_template($path."/reserv_row.tpl.php", array("nid"=> $nid, "reservObject"=>$objs , "reserv_month"=>$reserv_month ,"reserv_year"=>$reserv_year))
+				);
+			echo json_encode($response); 
+		} else {
+			$response = array(
+				"status"=>"error", 
+				"data"=>$valid,
+				);
+			echo json_encode($response); 
+		}
+		die();
+	}
+	
+	/* field edit controller */
+	$field = $_REQUEST["name"];
+	$value = $_REQUEST["value"];
+    	
+	$res = db_query("SELECT * FROM feodosia_leto WHERE nid = $nid");
+	$item = db_fetch_object($res);
+	if (empty($item)){
+		$item->nid = $nid;
+		$item->{$field} = $value;
+		$code = drupal_write_record("feodosia_leto", $item);
+	} else {
+		$item->{$field} = $value;
+		$code = drupal_write_record("feodosia_leto", $item,"nid");
+	}
+	
+	if (!$code) echo "Error to db writting!";
+
+	die();
+}
+function feodosia_leto_update_weight() {
+	/* This code update weight of terms as user set */
+	$vid =  variable_get('fl_voc_id', "6");
+	$tree = taxonomy_get_tree($vid);
+	$count = 0;
+	foreach ($tree as $key=>$item){
+		db_query('update {term_data} set weight = %d where tid = %d', $key, $item->tid);
+		$count++;	
+	}
+	drupal_set_message("Обновлено $count терминов");
+	drupal_goto(url("<front>"));
+}
+/*
+*  Страница для вывода списка вариантов по категориям
+*/
+function feodosia_leto_arenda() {
+	/* This code update weight of terms as user set */
+	drupal_goto("feodosia_leto/arenda");
+	//return "Настройка Arenda module";
+}
+function feodosia_leto_arenda_page() {
+	// INIT SECTION
+	$reserv_month =variable_get('fa_months', array(1));
+	$reserv_year = variable_get('fa_years', array(2015)); 
+	$path = drupal_get_path("module","feodosia_leto")."/template";
+	
+	$tree = taxonomy_get_tree(3);
+	$tree_city = taxonomy_get_tree(2);
+	$areas = taxonomy_get_tree(5, 122);
+	$rows = array();
+	$tids = array();
+	$reserveObjects = array();
+	
+	$op = "or";
+	if (isset($_GET["tid"])){ // Get term related nodes
+		$tids[] = $_GET["tid"];
+		$op="and";
+	} 
+	if (isset($_GET["atid"])) {
+		$tids[] = $_GET["atid"];
+		$op="and";
+	} 
+	if ( empty($tids) ) {
+		foreach($tree as $item){
+			$tids[] = $item->tid;
+		}
+	}
+	        
+		
+	if (!empty($tids)){
+		$result = taxonomy_select_all_nodes($tids, $op , "all", false);
+		while ($row = db_fetch_object($result)) {
+		  
+		   $row->title =  "Вариант №".$row->adid." ".$row->address;
+    	   $reserveObjects = unserialize($row->reserv);
+		   $row->reserv = theme_render_template($path."/reserv_row.tpl.php", array("nid"=>$row->nid, "reservObject"=>$reserveObjects, "reserv_month"=>$reserv_month ,"reserv_year"=>$reserv_year));
+		   $rows[] = $row;
+		  
+        }
+	}	
+	return theme_render_template($path."/arenda_page.tpl.php", 
+			array(	"tree"=>$tree,
+					"areas"=>$areas,
+					"tree_city"=>$tree_city,
+					"rows"=>$rows,  
+			));
+}
+/*function feodosia_leto_get_nodes($tids, $op, $reset = FALSE) {
+  static $my_data;
+  
+  foreach($tids as $item)
+  if (!isset($my_data) || $reset) {
+    if (!$reset && ($cache = cache_get('my_module_data'))) {
+      $my_data = $cache->data;
+    }
+    else {
+      // Do your expensive calculations here, and populate $my_data
+      // with the correct stuff..
+      cache_set('my_module_data', $my_data, 'cache');
+    }
+  }
+  return $my_data;
+}*/
+/**
+* Аналог taxonomy_select_nodes, но без ограничения (10000) выдачи записей если $pager = false
+*/
+function taxonomy_select_all_nodes($tids = array(), $operator = 'or', $depth = 0, $pager = TRUE, $order = 'n.sticky DESC, n.created DESC') {
+  if (count($tids) > 0) {
+    // For each term ID, generate an array of descendant term IDs to the right depth.
+    $descendant_tids = array();
+    if ($depth === 'all') {
+      $depth = NULL;
+    }
+    foreach ($tids as $index => $tid) {
+      $term = taxonomy_get_term($tid);
+      $tree = taxonomy_get_tree($term->vid, $tid, -1, $depth);
+      $descendant_tids[] = array_merge(array($tid), array_map('_taxonomy_get_tid_from_term', $tree));
+    }
+
+    if ($operator == 'or') {
+	    $cond = "";
+		$fa_outofseason = variable_get('fa_outofseason', 0);
+		$fa_notoutofseason = variable_get('fa_notoutofseason', 0);
+		if ($fa_outofseason == 1){
+			$cond = " AND f.field_outofseason_value = 1 ";
+		} 
+		if ($fa_notoutofseason == 1){
+			$cond = " AND f.field_outofseason_value = 0 ";
+		} 
+		if ($fa_outofseason == 1 && $fa_notoutofseason == 1){
+			$cond = "";
+		} 
+		
+      $args = call_user_func_array('array_merge', $descendant_tids);
+      $placeholders = implode (",",$args);
+	   $sql = "SELECT DISTINCT(n.nid), n.title, f.field_address_value as address, f.field_adid_value as adid, l.fio, l.phone, l.reserv, l.info 
+			FROM ((node n INNER JOIN term_node tn ON n.vid = tn.vid) Left Join content_type_realty f on n.nid = f.nid) left join feodosia_leto l on n.nid = l.nid 
+			WHERE tn.tid IN ( $placeholders ) AND n.status = 1 AND ( f.field_arendahide_value = 0 or f.field_arendahide_value is null ) ".$cond." ORDER BY ". $order;
+		$result = db_query($sql);
+    
+	} else {
+		$joins = '';
+		$wheres = '';
+		$args = array();
+		
+		$cond = "";
+		$fa_outofseason = variable_get('fa_outofseason', 0);
+		$fa_notoutofseason = variable_get('fa_notoutofseason', 0);
+		if ($fa_outofseason == 1){
+			$cond = " AND f.field_outofseason_value = 1 ";
+		} 
+		if ($fa_notoutofseason == 1){
+			$cond = " AND f.field_outofseason_value = 0 ";
+		} 
+		if ($fa_outofseason == 1 && $fa_notoutofseason == 1){
+			$cond = "";
+		} 
+		
+		foreach ($descendant_tids as $index => $tids) {
+			$placeholders = implode (",", $tids);
+			$joins .= ' INNER JOIN term_node tn'. $index .' ON n.vid = tn'. $index .'.vid';
+			$wheres .= ' AND tn'. $index .'.tid IN ('. $placeholders .')';
+			$args = array_merge($args, $tids);
+		}
+		$sql = 'SELECT DISTINCT(n.nid), n.sticky, n.title, n.created, f.field_address_value as address, f.field_adid_value as adid, l.fio, l.phone, l.reserv, l.info 
+		FROM node n  '. $joins .' Left Join content_type_realty f on n.nid = f.nid  left join feodosia_leto l on n.nid = l.nid WHERE n.status = 1 '. $wheres .$cond.' AND ( f.field_arendahide_value = 0 or f.field_arendahide_value is null ) ORDER BY '. $order;
+		//print_r($sql);
+		$result = db_query($sql);
+	}
+  }
+  return $result;
+}
+
+/* Output custom filter form */
+function _filter_form(){
+	$path = drupal_get_path("module","feodosia_leto")."/template";
+	
+	$city = taxonomy_get_tree(2);
+	$types = taxonomy_get_tree(3, 0, -1, 1);
+	$bads = taxonomy_get_tree(5, 33, -1, 1);
+	$area = taxonomy_get_tree(5, 122, -1, 1);
+	$etag = taxonomy_get_tree(5, 109, -1, 1);
+	$beach= taxonomy_get_tree(5, 107, -1, 1);
+	$seetime = taxonomy_get_tree(5, 32, -1, 1);
+	$technics = taxonomy_get_tree(5, 31, -1, 1);
+	$subtypes = array();
+	foreach($types  as $item){
+		$sub =  taxonomy_get_tree(3, $item->tid, -1, 1);
+		$subtypes[$item->tid] = $sub;
+	}
+	return theme_render_template($path."/filter_form.tpl.php", 
+		array(	"city"=>$city, 
+				"types"=>$types,
+				"subtypes"=>$subtypes,
+				"bads"=>$bads,
+				"area"=>$area,
+				"etag"=>$etag,
+				"beach"=>$beach,
+				"seetime"=>$seetime,
+				"technics"=>$technics,
+				
+			));
+}
